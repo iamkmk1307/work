@@ -25,12 +25,17 @@
         .calendar-cell.empty { background-color: #f9f9f9; }
         .date-number { font-weight: bold; margin-bottom: 5px; color: #555; }
         
+        /* Event Badges CSS */
         .event { font-size: 11px; padding: 5px; margin-bottom: 4px; border-radius: 4px; color: white; word-break: break-all; line-height: 1.3; cursor: pointer; transition: all 0.2s; box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
         .event:hover { opacity: 0.8; transform: translateY(-1px); }
-        .ev-meeting { background-color: #9b59b6; }
-        .ev-review { background-color: #f39c12; }
-        .ev-draft { background-color: #3498db; }
-        .ev-approve { background-color: #e74c3c; }
+        
+        /* 업무별 색상 지정 */
+        .ev-meeting { background-color: #9b59b6; } /* 상정: 보라색 */
+        .ev-review { background-color: #f39c12; }  /* 회의록: 주황색 */
+        .ev-draft { background-color: #3498db; }   /* 작성: 파란색 */
+        .ev-approve { background-color: #e74c3c; } /* 결재: 빨간색 */
+        .ev-send { background-color: #27ae60; }    /* 방송사 발송: 초록색 */
+        .ev-reply { background-color: #16a085; }   /* 민원답변: 청록색 */
         
         /* 업무 완료(회색 배경, 취소선) 스타일 */
         .ev-completed { background-color: #95a5a6 !important; text-decoration: line-through; opacity: 0.7; }
@@ -41,7 +46,7 @@
 <div class="container">
     <h1>
         📅 방심위 상정 안건 및 업무 캘린더 
-        <span class="version">(V6 데이터 자동보존형)</span>
+        <span class="version">(V7 완결판: 발송·민원답변 추가)</span>
     </h1>
     
     <div class="panel-group">
@@ -82,7 +87,7 @@
     </div>
     
     <div style="text-align: right; font-size: 12px; color: #7f8c8d; margin-bottom: 5px;">
-        ※ 달력의 일정을 <b>클릭</b>하시면 <b>'완료(회색)'</b> 처리되며, 새로고침해도 <b>데이터가 보존</b>됩니다.
+        ※ 달력의 일정을 <b>클릭</b>하시면 <b>'완료(회색)'</b> 처리되며 데이터가 <b>자동 보존</b>됩니다.
     </div>
 
     <div class="calendar-grid" id="calendarGrid">
@@ -95,221 +100,5 @@
     var currentYear = new Date().getFullYear();
     var currentMonth = new Date().getMonth();
 
-    // 🌟 데이터 로드 함수 (새로고침 시 실행)
     function loadData() {
-        var savedAgendas = localStorage.getItem('kcsc_agendas');
-        var savedCompleted = localStorage.getItem('kcsc_completedEvents');
-        
-        if (savedAgendas) {
-            agendas = JSON.parse(savedAgendas);
-        }
-        if (savedCompleted) {
-            completedEvents = JSON.parse(savedCompleted);
-        }
-    }
-
-    // 🌟 데이터 저장 함수 (데이터가 변경될 때마다 실행)
-    function saveData() {
-        localStorage.setItem('kcsc_agendas', JSON.stringify(agendas));
-        localStorage.setItem('kcsc_completedEvents', JSON.stringify(completedEvents));
-    }
-
-    function init() {
-        loadData(); // 시작 시 데이터 불러오기
-        renderCalendar(currentYear, currentMonth);
-        updatePendingList();
-    }
-
-    function addAgenda() {
-        var date = document.getElementById('agendaDate').value;
-        var name = document.getElementById('agendaName').value;
-        if (!date || !name) { alert('날짜와 안건명을 모두 입력해주세요.'); return; }
-
-        var id = new Date().getTime().toString();
-        agendas.push({ id: id, date: date, name: name, result: '' });
-        
-        saveData(); // 데이터 저장!
-        
-        document.getElementById('agendaName').value = '';
-        updatePendingList();
-        
-        var parts = date.split('-');
-        currentYear = parseInt(parts[0], 10);
-        currentMonth = parseInt(parts[1], 10) - 1;
-        renderCalendar(currentYear, currentMonth);
-    }
-
-    function updateResult() {
-        var selectObj = document.getElementById('pendingAgendas');
-        var id = selectObj.value;
-        var resultSelect = document.getElementById('agendaResult');
-        var resultValue = resultSelect.value;
-        var resultText = resultSelect.options[resultSelect.selectedIndex].text;
-
-        if (!id || !resultValue) { alert('안건과 결과를 모두 선택해주세요.'); return; }
-
-        for(var i=0; i<agendas.length; i++) {
-            if(agendas[i].id === id) {
-                agendas[i].result = resultValue;
-                agendas[i].isAdministrative = (resultText.indexOf('행정지도') !== -1);
-                var parts = agendas[i].date.split('-');
-                currentYear = parseInt(parts[0], 10);
-                currentMonth = parseInt(parts[1], 10) - 1;
-                break;
-            }
-        }
-
-        saveData(); // 데이터 저장!
-
-        document.getElementById('agendaResult').value = '';
-        updatePendingList();
-        renderCalendar(currentYear, currentMonth);
-        
-        alert('의결 결과가 반영되어 후속 문서작성 일정이 자동 생성되었습니다!');
-    }
-
-    function updatePendingList() {
-        var select = document.getElementById('pendingAgendas');
-        select.innerHTML = '<option value="">결과 대기중인 안건 선택</option>';
-        for(var i=0; i<agendas.length; i++) {
-            if(agendas[i].result === '') {
-                var opt = document.createElement('option');
-                opt.value = agendas[i].id;
-                opt.textContent = '[' + agendas[i].date + '] ' + agendas[i].name;
-                select.appendChild(opt);
-            }
-        }
-    }
-
-    function parseDate(dateStr) {
-        var parts = dateStr.split('-');
-        return new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
-    }
-
-    function formatDate(dateObj) {
-        var y = dateObj.getFullYear();
-        var m = dateObj.getMonth() + 1;
-        var d = dateObj.getDate();
-        return y + '-' + (m < 10 ? '0' + m : m) + '-' + (d < 10 ? '0' + d : d);
-    }
-
-    function addDays(dateStr, days) {
-        var d = parseDate(dateStr);
-        d.setDate(d.getDate() + days);
-        return formatDate(d);
-    }
-
-    function getNextMonday(dateStr) {
-        var d = parseDate(dateStr);
-        var day = d.getDay();
-        var diff = d.getDate() + (day === 0 ? 1 : 8 - day); 
-        d.setDate(diff);
-        return formatDate(d);
-    }
-
-    // 일정 클릭 시 완료 상태 토글 함수
-    function toggleEventCompletion(eventId) {
-        var index = completedEvents.indexOf(eventId);
-        if (index > -1) {
-            completedEvents.splice(index, 1); 
-        } else {
-            completedEvents.push(eventId); 
-        }
-        
-        saveData(); // 데이터 저장!
-        
-        renderCalendar(currentYear, currentMonth); 
-    }
-
-    function generateEvents() {
-        var events = [];
-        for(var i=0; i<agendas.length; i++) {
-            var a = agendas[i];
-            events.push({ id: a.id + '-meeting', date: a.date, text: '[상정] ' + a.name, type: 'ev-meeting' });
-            events.push({ id: a.id + '-review', date: addDays(a.date, 1), text: '[회의록검토] ' + a.name, type: 'ev-review' });
-
-            if (a.result && a.result !== '문제없음') {
-                var isAdmin = a.isAdministrative;
-                var docType = isAdmin ? '행정지도문' : '의결서';
-                var nextMon = getNextMonday(a.date);
-                var approveDays = isAdmin ? 3 : 10;
-                var nextThu = addDays(nextMon, approveDays); 
-
-                events.push({ id: a.id + '-draft', date: nextMon, text: '[' + docType + ' 작성] ' + a.name, type: 'ev-draft' });
-                events.push({ id: a.id + '-approve', date: nextThu, text: '[' + docType + ' 결재] ' + a.name, type: 'ev-approve' });
-            }
-        }
-        return events;
-    }
-
-    function changeMonth(offset) {
-        currentMonth += offset;
-        if (currentMonth < 0) { currentMonth = 11; currentYear--; }
-        else if (currentMonth > 11) { currentMonth = 0; currentYear++; }
-        renderCalendar(currentYear, currentMonth);
-    }
-
-    function renderCalendar(year, month) {
-        document.getElementById('currentMonthLabel').innerText = year + '년 ' + (month + 1) + '월';
-        var grid = document.getElementById('calendarGrid');
-        grid.innerHTML = '';
-
-        var days = ['일', '월', '화', '수', '목', '금', '토'];
-        for(var i=0; i<days.length; i++) {
-            var div = document.createElement('div');
-            div.className = 'calendar-day-header';
-            div.innerText = days[i];
-            grid.appendChild(div);
-        }
-
-        var firstDay = new Date(year, month, 1).getDay();
-        var daysInMonth = new Date(year, month + 1, 0).getDate();
-        
-        var allEvents = generateEvents();
-
-        for (var i = 0; i < firstDay; i++) {
-            var cell = document.createElement('div');
-            cell.className = 'calendar-cell empty';
-            grid.appendChild(cell);
-        }
-
-        for (var i = 1; i <= daysInMonth; i++) {
-            var cell = document.createElement('div');
-            cell.className = 'calendar-cell';
-            
-            var dateStr = year + '-' + (month + 1 < 10 ? '0' + (month + 1) : month + 1) + '-' + (i < 10 ? '0' + i : i);
-            var dateDiv = document.createElement('div');
-            dateDiv.className = 'date-number';
-            dateDiv.innerText = i;
-            cell.appendChild(dateDiv);
-
-            for(var j=0; j<allEvents.length; j++) {
-                if(allEvents[j].date === dateStr) {
-                    var evDiv = document.createElement('div');
-                    
-                    var evClass = 'event ' + allEvents[j].type;
-                    if (completedEvents.indexOf(allEvents[j].id) > -1) {
-                        evClass += ' ev-completed';
-                    }
-                    evDiv.className = evClass;
-                    evDiv.innerText = allEvents[j].text;
-                    
-                    (function(eventId) {
-                        evDiv.onclick = function() {
-                            toggleEventCompletion(eventId);
-                        };
-                    })(allEvents[j].id);
-
-                    cell.appendChild(evDiv);
-                }
-            }
-
-            grid.appendChild(cell);
-        }
-    }
-
-    window.onload = init;
-</script>
-
-</body>
-</html>
+        var savedAgendas = localStorage
