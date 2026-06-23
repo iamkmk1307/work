@@ -45,7 +45,7 @@
 
 <div class="container">
     <h1>
-        <div>📅 방심위 상정 안건 캘린더 <span class="version">(V9 결과 수정 가능)</span></div>
+        <div>📅 방심위 상정 안건 캘린더 <span class="version">(V10 문제없음 답변 추가)</span></div>
         <button onclick="resetData()" style="font-size: 13px; padding: 6px 12px; background-color: #e74c3c; border-radius: 4px; color: white; border: none; cursor: pointer;">🚨 데이터 초기화</button>
     </h1>
     
@@ -168,7 +168,6 @@
         alert('[' + name + '] 안건이 성공적으로 등록되었습니다!\n\n※ 등록한 날짜의 달력을 확인해 보세요.');
     }
 
-    // 🌟 결과 수정 로직 업데이트
     function updateResult() {
         var selectObj = document.getElementById('pendingAgendas');
         var id = selectObj.value;
@@ -180,7 +179,6 @@
 
         for(var i=0; i<agendas.length; i++) {
             if(agendas[i].id === id) {
-                // '대기중'을 선택하면 결과 초기화
                 if(resultValue === '대기중') {
                     agendas[i].result = '';
                     agendas[i].isAdministrative = false;
@@ -202,10 +200,9 @@
         updatePendingList();
         renderCalendar(currentYear, currentMonth);
         
-        alert('안건의 결과가 성공적으로 수정(반영)되었습니다!');
+        alert('안건의 결과가 성공적으로 반영되었습니다!');
     }
 
-    // 🌟 안건 목록에 모든 안건과 현재 상태 표시하도록 업데이트
     function updatePendingList() {
         var select = document.getElementById('pendingAgendas');
         select.innerHTML = '<option value="">안건 선택 (결과 수정 가능)</option>';
@@ -215,9 +212,7 @@
             var opt = document.createElement('option');
             opt.value = agendas[i].id;
             
-            // 현재 상태 텍스트
             var statusStr = agendas[i].result === '' ? '대기중' : agendas[i].result;
-            
             opt.textContent = '[' + agendas[i].date + '] ' + agendas[i].name + ' (현재: ' + statusStr + ')';
             select.appendChild(opt);
         }
@@ -225,137 +220,4 @@
 
     function parseDate(dateStr) {
         var parts = dateStr.split('-');
-        return new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
-    }
-
-    function formatDate(dateObj) {
-        var y = dateObj.getFullYear();
-        var m = dateObj.getMonth() + 1;
-        var d = dateObj.getDate();
-        return y + '-' + (m < 10 ? '0' + m : m) + '-' + (d < 10 ? '0' + d : d);
-    }
-
-    function addDays(dateStr, days) {
-        var d = parseDate(dateStr);
-        d.setDate(d.getDate() + days);
-        return formatDate(d);
-    }
-
-    function getNextMonday(dateStr) {
-        var d = parseDate(dateStr);
-        var day = d.getDay();
-        var diff = d.getDate() + (day === 0 ? 1 : 8 - day); 
-        d.setDate(diff);
-        return formatDate(d);
-    }
-
-    function toggleEventCompletion(eventId) {
-        var index = completedEvents.indexOf(eventId);
-        if (index > -1) {
-            completedEvents.splice(index, 1); 
-        } else {
-            completedEvents.push(eventId); 
-        }
-        saveData(); 
-        renderCalendar(currentYear, currentMonth); 
-    }
-
-    function generateEvents() {
-        var events = [];
-        for(var i=0; i<agendas.length; i++) {
-            var a = agendas[i];
-            if(!a || !a.date) continue;
-
-            events.push({ id: a.id + '-meeting', date: a.date, text: '[상정] ' + a.name, type: 'ev-meeting' });
-            events.push({ id: a.id + '-review', date: addDays(a.date, 1), text: '[회의록검토] ' + a.name, type: 'ev-review' });
-
-            if (a.result && a.result !== '문제없음') {
-                var isAdmin = a.isAdministrative;
-                var docType = isAdmin ? '행정지도문' : '의결서';
-                
-                var nextMon = getNextMonday(a.date);
-                var approveDays = isAdmin ? 3 : 10;
-                var nextThu = addDays(nextMon, approveDays); 
-                var nextFri = addDays(nextThu, 1); 
-
-                events.push({ id: a.id + '-draft', date: nextMon, text: '[' + docType + ' 작성] ' + a.name, type: 'ev-draft' });
-                events.push({ id: a.id + '-approve', date: nextThu, text: '[' + docType + ' 결재] ' + a.name, type: 'ev-approve' });
-                
-                events.push({ id: a.id + '-send', date: nextFri, text: '[방송사 발송] ' + a.name, type: 'ev-send' });
-                events.push({ id: a.id + '-reply', date: nextFri, text: '[민원답변] ' + a.name, type: 'ev-reply' });
-            }
-        }
-        return events;
-    }
-
-    function changeMonth(offset) {
-        currentMonth += offset;
-        if (currentMonth < 0) { currentMonth = 11; currentYear--; }
-        else if (currentMonth > 11) { currentMonth = 0; currentYear++; }
-        renderCalendar(currentYear, currentMonth);
-    }
-
-    function renderCalendar(year, month) {
-        document.getElementById('currentMonthLabel').innerText = year + '년 ' + (month + 1) + '월';
-        var grid = document.getElementById('calendarGrid');
-        grid.innerHTML = '';
-
-        var days = ['일', '월', '화', '수', '목', '금', '토'];
-        for(var i=0; i<days.length; i++) {
-            var div = document.createElement('div');
-            div.className = 'calendar-day-header';
-            div.innerText = days[i];
-            grid.appendChild(div);
-        }
-
-        var firstDay = new Date(year, month, 1).getDay();
-        var daysInMonth = new Date(year, month + 1, 0).getDate();
-        
-        var allEvents = generateEvents();
-
-        for (var i = 0; i < firstDay; i++) {
-            var cell = document.createElement('div');
-            cell.className = 'calendar-cell empty';
-            grid.appendChild(cell);
-        }
-
-        for (var i = 1; i <= daysInMonth; i++) {
-            var cell = document.createElement('div');
-            cell.className = 'calendar-cell';
-            
-            var dateStr = year + '-' + (month + 1 < 10 ? '0' + (month + 1) : month + 1) + '-' + (i < 10 ? '0' + i : i);
-            var dateDiv = document.createElement('div');
-            dateDiv.className = 'date-number';
-            dateDiv.innerText = i;
-            cell.appendChild(dateDiv);
-
-            for(var j=0; j<allEvents.length; j++) {
-                if(allEvents[j].date === dateStr) {
-                    var evDiv = document.createElement('div');
-                    
-                    var evClass = 'event ' + allEvents[j].type;
-                    if (completedEvents.indexOf(allEvents[j].id) > -1) {
-                        evClass += ' ev-completed';
-                    }
-                    evDiv.className = evClass;
-                    evDiv.innerText = allEvents[j].text;
-                    
-                    (function(eventId) {
-                        evDiv.onclick = function() {
-                            toggleEventCompletion(eventId);
-                        };
-                    })(allEvents[j].id);
-
-                    cell.appendChild(evDiv);
-                }
-            }
-
-            grid.appendChild(cell);
-        }
-    }
-
-    window.onload = init;
-</script>
-
-</body>
-</html>
+        return new Date(parseInt
