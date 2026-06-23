@@ -7,7 +7,8 @@
     <style>
         body { font-family: 'Malgun Gothic', sans-serif; background-color: #f4f7f6; color: #333; margin: 0; padding: 20px; }
         .container { max-width: 1000px; margin: 0 auto; background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-        h1 { font-size: 24px; color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 10px; margin-bottom: 20px; }
+        h1 { font-size: 24px; color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 10px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: flex-end; }
+        .version { font-size: 14px; color: #7f8c8d; font-weight: normal; }
         .panel-group { display: flex; gap: 20px; margin-bottom: 20px; }
         .panel { flex: 1; padding: 15px; background: #f8f9fa; border-radius: 8px; border: 1px solid #ddd; }
         .panel h3 { margin-top: 0; font-size: 16px; color: #333; }
@@ -24,17 +25,24 @@
         .calendar-cell.empty { background-color: #f9f9f9; }
         .date-number { font-weight: bold; margin-bottom: 5px; color: #555; }
         
-        .event { font-size: 11px; padding: 4px; margin-bottom: 3px; border-radius: 3px; color: white; word-break: break-all; line-height: 1.2; }
+        .event { font-size: 11px; padding: 5px; margin-bottom: 4px; border-radius: 4px; color: white; word-break: break-all; line-height: 1.3; cursor: pointer; transition: all 0.2s; box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
+        .event:hover { opacity: 0.8; transform: translateY(-1px); }
         .ev-meeting { background-color: #9b59b6; }
         .ev-review { background-color: #f39c12; }
         .ev-draft { background-color: #3498db; }
         .ev-approve { background-color: #e74c3c; }
+        
+        /* 업무 완료(회색 배경, 취소선) 스타일 */
+        .ev-completed { background-color: #95a5a6 !important; text-decoration: line-through; opacity: 0.7; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h1>📅 방심위 상정 안건 및 업무 캘린더 (V4 최신버전)</h1>
+    <h1>
+        📅 방심위 상정 안건 및 업무 캘린더 
+        <span class="version">(V6 데이터 자동보존형)</span>
+    </h1>
     
     <div class="panel-group">
         <div class="panel">
@@ -73,16 +81,41 @@
         <button onclick="changeMonth(1)">다음 달 ▶</button>
     </div>
     
+    <div style="text-align: right; font-size: 12px; color: #7f8c8d; margin-bottom: 5px;">
+        ※ 달력의 일정을 <b>클릭</b>하시면 <b>'완료(회색)'</b> 처리되며, 새로고침해도 <b>데이터가 보존</b>됩니다.
+    </div>
+
     <div class="calendar-grid" id="calendarGrid">
         </div>
 </div>
 
 <script>
     var agendas = []; 
+    var completedEvents = []; 
     var currentYear = new Date().getFullYear();
     var currentMonth = new Date().getMonth();
 
+    // 🌟 데이터 로드 함수 (새로고침 시 실행)
+    function loadData() {
+        var savedAgendas = localStorage.getItem('kcsc_agendas');
+        var savedCompleted = localStorage.getItem('kcsc_completedEvents');
+        
+        if (savedAgendas) {
+            agendas = JSON.parse(savedAgendas);
+        }
+        if (savedCompleted) {
+            completedEvents = JSON.parse(savedCompleted);
+        }
+    }
+
+    // 🌟 데이터 저장 함수 (데이터가 변경될 때마다 실행)
+    function saveData() {
+        localStorage.setItem('kcsc_agendas', JSON.stringify(agendas));
+        localStorage.setItem('kcsc_completedEvents', JSON.stringify(completedEvents));
+    }
+
     function init() {
+        loadData(); // 시작 시 데이터 불러오기
         renderCalendar(currentYear, currentMonth);
         updatePendingList();
     }
@@ -95,6 +128,8 @@
         var id = new Date().getTime().toString();
         agendas.push({ id: id, date: date, name: name, result: '' });
         
+        saveData(); // 데이터 저장!
+        
         document.getElementById('agendaName').value = '';
         updatePendingList();
         
@@ -102,8 +137,6 @@
         currentYear = parseInt(parts[0], 10);
         currentMonth = parseInt(parts[1], 10) - 1;
         renderCalendar(currentYear, currentMonth);
-        
-        alert('[' + name + '] 안건이 캘린더에 성공적으로 등록되었습니다!\n\n※ 해당 날짜 칸에 일정이 생겼는지 확인해주세요.\n(월을 넘기는 일정은 \'다음 달\' 버튼을 눌러 확인 가능합니다)');
     }
 
     function updateResult() {
@@ -125,6 +158,8 @@
                 break;
             }
         }
+
+        saveData(); // 데이터 저장!
 
         document.getElementById('agendaResult').value = '';
         updatePendingList();
@@ -172,20 +207,36 @@
         return formatDate(d);
     }
 
+    // 일정 클릭 시 완료 상태 토글 함수
+    function toggleEventCompletion(eventId) {
+        var index = completedEvents.indexOf(eventId);
+        if (index > -1) {
+            completedEvents.splice(index, 1); 
+        } else {
+            completedEvents.push(eventId); 
+        }
+        
+        saveData(); // 데이터 저장!
+        
+        renderCalendar(currentYear, currentMonth); 
+    }
+
     function generateEvents() {
         var events = [];
         for(var i=0; i<agendas.length; i++) {
             var a = agendas[i];
-            events.push({ date: a.date, text: '[상정] ' + a.name, type: 'ev-meeting' });
-            events.push({ date: addDays(a.date, 1), text: '[초안 검토] ' + a.name, type: 'ev-review' });
+            events.push({ id: a.id + '-meeting', date: a.date, text: '[상정] ' + a.name, type: 'ev-meeting' });
+            events.push({ id: a.id + '-review', date: addDays(a.date, 1), text: '[회의록검토] ' + a.name, type: 'ev-review' });
 
             if (a.result && a.result !== '문제없음') {
-                var docType = a.isAdministrative ? '행정지도문' : '의결서';
+                var isAdmin = a.isAdministrative;
+                var docType = isAdmin ? '행정지도문' : '의결서';
                 var nextMon = getNextMonday(a.date);
-                var nextThu = addDays(nextMon, 3); 
+                var approveDays = isAdmin ? 3 : 10;
+                var nextThu = addDays(nextMon, approveDays); 
 
-                events.push({ date: nextMon, text: '[' + docType + ' 작성] ' + a.name, type: 'ev-draft' });
-                events.push({ date: nextThu, text: '[' + docType + ' 결재] ' + a.name, type: 'ev-approve' });
+                events.push({ id: a.id + '-draft', date: nextMon, text: '[' + docType + ' 작성] ' + a.name, type: 'ev-draft' });
+                events.push({ id: a.id + '-approve', date: nextThu, text: '[' + docType + ' 결재] ' + a.name, type: 'ev-approve' });
             }
         }
         return events;
@@ -235,8 +286,20 @@
             for(var j=0; j<allEvents.length; j++) {
                 if(allEvents[j].date === dateStr) {
                     var evDiv = document.createElement('div');
-                    evDiv.className = 'event ' + allEvents[j].type;
+                    
+                    var evClass = 'event ' + allEvents[j].type;
+                    if (completedEvents.indexOf(allEvents[j].id) > -1) {
+                        evClass += ' ev-completed';
+                    }
+                    evDiv.className = evClass;
                     evDiv.innerText = allEvents[j].text;
+                    
+                    (function(eventId) {
+                        evDiv.onclick = function() {
+                            toggleEventCompletion(eventId);
+                        };
+                    })(allEvents[j].id);
+
                     cell.appendChild(evDiv);
                 }
             }
