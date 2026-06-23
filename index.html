@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>방송미디어통신심의위원회 업무 자동화 비서</title>
+    <style>
+        body { font-family: 'Malgun Gothic', sans-serif; background-color: #f4f7f6; color: #333; margin: 0; padding: 20px; }
+        .container { max-width: 800px; margin: 0 auto; background: #fff; padding: 30px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        h1 { font-size: 24px; color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 10px; }
+        .form-group { margin-bottom: 15px; display: flex; gap: 10px; align-items: center; }
+        input[type="text"], select { padding: 10px; border: 1px solid #ccc; border-radius: 4px; flex: 1; }
+        button { padding: 10px 20px; background-color: #3498db; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
+        button:hover { background-color: #2980b9; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+        th { background-color: #f8f9fa; font-weight: bold; color: #2c3e50; }
+        .status-badge { background-color: #f39c12; color: white; padding: 4px 8px; border-radius: 4px; font-size: 12px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>📝 주간 심의업무 일정 생성기</h1>
+    
+    <div class="form-group">
+        <input type="text" id="agendaName" placeholder="안건명 입력 (예: MBC-TV '100분토론')">
+        <select id="agendaResult">
+            <option value="">의결 결과 선택</option>
+            <option value="의견제시">의견제시 (행정지도)</option>
+            <option value="권고">권고 (행정지도)</option>
+            <option value="주의">주의 (법정제재)</option>
+            <option value="경고">경고 (법정제재)</option>
+            <option value="관계자징계">관계자징계 (법정제재)</option>
+            <option value="과징금">과징금 (법정제재)</option>
+        </select>
+        <button onclick="addSchedule()">일정 추가</button>
+    </div>
+
+    <table id="scheduleTable">
+        <thead>
+            <tr>
+                <th>날짜 (추정)</th>
+                <th>분류</th>
+                <th>세부 업무 내용</th>
+                <th>상태</th>
+            </tr>
+        </thead>
+        <tbody id="scheduleBody">
+            </tbody>
+    </table>
+</div>
+
+<script>
+    function addSchedule() {
+        const agendaName = document.getElementById('agendaName').value;
+        const agendaResultSelect = document.getElementById('agendaResult');
+        const agendaResult = agendaResultSelect.value;
+        const resultText = agendaResultSelect.options[agendaResultSelect.selectedIndex].text;
+
+        if (!agendaName || !agendaResult) {
+            alert('안건명과 의결 결과를 모두 입력해주세요.');
+            return;
+        }
+
+        const tbody = document.getElementById('scheduleBody');
+
+        // 1. 목요일 회의록 검토 일정 추가
+        const row1 = document.createElement('tr');
+        row1.innerHTML = `
+            <td>이번 주 목요일</td>
+            <td>회의록</td>
+            <td>${agendaName} 방송소위 회의록 초안 검토 및 수정</td>
+            <td><span class="status-badge">대기</span></td>
+        `;
+        tbody.appendChild(row1);
+
+        // 2. 금요일 문서 작성 일정 추가 (행정지도 vs 법정제재 판별)
+        const isAdministrative = resultText.includes('행정지도');
+        const docType = isAdministrative ? '행정지도문' : '의결서';
+        const docAction = isAdministrative ? `행정지도문('${agendaResult}') 초안 작성` : `법정제재 의결서('${agendaResult}') 초안 작성`;
+
+        const row2 = document.createElement('tr');
+        row2.innerHTML = `
+            <td>이번 주 금요일</td>
+            <td>${docType}</td>
+            <td>${agendaName} ${docAction}</td>
+            <td><span class="status-badge">대기</span></td>
+        `;
+        tbody.appendChild(row2);
+
+        // 입력창 초기화
+        document.getElementById('agendaName').value = '';
+        document.getElementById('agendaResult').value = '';
+    }
+</script>
+
+</body>
+</html>
