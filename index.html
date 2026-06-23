@@ -33,7 +33,7 @@
         .calendar-cell.empty { background-color: #f9f9f9; }
         
         /* 휴가용 CSS 클래스 */
-        .calendar-cell.vacation-bg { background-color: #e8e8e8 !important; } /* 옅은 검은/회색 배경 */
+        .calendar-cell.vacation-bg { background-color: #e8e8e8 !important; } 
         .date-header-wrapper { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 5px; }
         .date-number { font-weight: bold; color: #555; }
         .vacation-label { color: #e74c3c; font-size: 11px; font-weight: bold; cursor: pointer; background: rgba(255,255,255,0.7); padding: 2px 4px; border-radius: 3px; }
@@ -50,4 +50,54 @@
         .ev-send { background-color: #27ae60; }    
         .ev-reply { background-color: #16a085; }   
         
-        .ev-completed { background-color: #95a5a6 !important; text-decoration: line-through; opacity: 0
+        .ev-completed { background-color: #95a5a6 !important; text-decoration: line-through; opacity: 0.7; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>
+        <div>📅 방심위 상정 안건 캘린더 <span class="version">(V14.1 안전 복구 버전)</span></div>
+        <button onclick="resetData()" style="font-size: 13px; padding: 6px 12px; background-color: #c0392b; border-radius: 4px; color: white; border: none; cursor: pointer;">🚨 데이터 초기화</button>
+    </h1>
+    
+    <div class="layout-wrapper">
+        <div class="main-content">
+            <div class="panel-group">
+                <div class="panel">
+                    <h3>1. 신규 안건 상정</h3>
+                    <div class="form-group">
+                        <input type="date" id="agendaDate">
+                        <input type="text" id="agendaName" placeholder="안건명 (예: 100분토론)">
+                        <button onclick="addAgenda()">안건 등록</button>
+                    </div>
+                </div>
+
+                <div class="panel">
+                    <h3>2. 결과 업데이트</h3>
+                    <div class="form-group">
+                        <select id="pendingAgendas">
+                            <option value="">안건 선택 (결과 수정 가능)</option>
+                        </select>
+                        <select id="agendaResult">
+                            <option value="">의결 결과 선택</option>
+                            <option value="대기중">🔄 결과 초기화(대기)</option>
+                            <option value="문제없음">문제없음</option>
+                            <option value="의견제시">의견제시 (행정지도)</option>
+                            <option value="권고">권고 (행정지도)</option>
+                            <option value="주의">주의 (법정제재)</option>
+                            <option value="경고">경고 (법정제재)</option>
+                            <option value="관계자징계">관계자징계 (법정제재)</option>
+                            <option value="과징금">과징금 (법정제재)</option>
+                        </select>
+                        <button onclick="updateResult()">결과 반영하기</button>
+                    </div>
+                </div>
+
+                <div class="panel" style="background: #fdf2e9; border-color: #fad7a1;">
+                    <h3>🌴 3. 내 휴가 일정 등록</h3>
+                    <div class="form-group">
+                        <input type="date" id="vacationDate">
+                        <select id="vacationType">
+                            <option value="전일휴가">전일휴가</option>
+                            <option value="전반차">전반차 (08:
