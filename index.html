@@ -29,7 +29,7 @@
         .calendar-header button { padding: 5px 10px; }
         .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 1px; background-color: #ddd; border: 1px solid #ddd; }
         .calendar-day-header { background-color: #eee; padding: 10px; text-align: center; font-weight: bold; font-size: 14px; }
-        .calendar-cell { background-color: #fff; min-height: 100px; padding: 5px; box-sizing: border-box; transition: background-color 0.3s; }
+        .calendar-cell { background-color: #fff; min-height: 100px; padding: 5px; box-sizing: border-box; }
         .calendar-cell.empty { background-color: #f9f9f9; }
         
         /* 휴가용 CSS 클래스 */
@@ -57,7 +57,7 @@
 
 <div class="container">
     <h1>
-        <div>📅 방심위 상정 안건 캘린더 <span class="version">(V14.1 안전 복구 버전)</span></div>
+        <div>📅 방심위 상정 안건 캘린더 <span class="version">(V15 순정 기반 휴가 추가 버전)</span></div>
         <button onclick="resetData()" style="font-size: 13px; padding: 6px 12px; background-color: #c0392b; border-radius: 4px; color: white; border: none; cursor: pointer;">🚨 데이터 초기화</button>
     </h1>
     
@@ -95,9 +95,114 @@
                 </div>
 
                 <div class="panel" style="background: #fdf2e9; border-color: #fad7a1;">
-                    <h3>🌴 3. 내 휴가 일정 등록</h3>
+                    <h3>🌴 3. 내 휴가 등록</h3>
                     <div class="form-group">
                         <input type="date" id="vacationDate">
                         <select id="vacationType">
                             <option value="전일휴가">전일휴가</option>
-                            <option value="전반차">전반차 (08:
+                            <option value="전반차">전반차 (08:00~13:00)</option>
+                            <option value="후반차">후반차 (12:00~17:00)</option>
+                            <option value="전반반차">전반반차 (08:00~10:00)</option>
+                            <option value="후반반차">후반반차 (15:00~17:00)</option>
+                        </select>
+                        <button onclick="addVacation()" style="background-color: #e67e22;">휴가 등록</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="calendar-header">
+                <button onclick="changeMonth(-1)">◀ 이전 달</button>
+                <h2 id="currentMonthLabel" style="margin:0;"></h2>
+                <button onclick="changeMonth(1)">다음 달 ▶</button>
+            </div>
+            
+            <div style="text-align: right; font-size: 12px; color: #7f8c8d; margin-bottom: 5px;">
+                ※ 일정을 클릭하면 완료(회색) 처리됩니다. / 휴가 글자를 클릭하면 삭제됩니다.
+            </div>
+
+            <div class="calendar-grid" id="calendarGrid"></div>
+        </div>
+
+        <div class="side-memo">
+            <h3>📝 상시 업무 메모</h3>
+            <textarea id="dailyMemo" placeholder="여기에 상시 업무나 간단한 메모를 자유롭게 기록하세요.&#10;(글자를 입력하는 즉시 자동 저장됩니다)"></textarea>
+        </div>
+    </div>
+</div>
+
+<script>
+    var agendas = []; 
+    var completedEvents = []; 
+    var vacations = []; 
+    var currentYear = new Date().getFullYear();
+    var currentMonth = new Date().getMonth();
+
+    // V13의 순수 데이터 로드 방식으로 복원
+    function loadData() {
+        var savedAgendas = localStorage.getItem('kcsc_agendas');
+        var savedCompleted = localStorage.getItem('kcsc_completedEvents');
+        var savedMemo = localStorage.getItem('kcsc_memo'); 
+        var savedVacations = localStorage.getItem('kcsc_vacations'); 
+        
+        if (savedAgendas) { agendas = JSON.parse(savedAgendas); }
+        if (savedCompleted) { completedEvents = JSON.parse(savedCompleted); }
+        if (savedMemo) { document.getElementById('dailyMemo').value = savedMemo; }
+        if (savedVacations) { vacations = JSON.parse(savedVacations); }
+    }
+
+    function saveData() {
+        localStorage.setItem('kcsc_agendas', JSON.stringify(agendas));
+        localStorage.setItem('kcsc_completedEvents', JSON.stringify(completedEvents));
+        localStorage.setItem('kcsc_vacations', JSON.stringify(vacations)); 
+    }
+
+    function resetData() {
+        if(confirm("저장된 모든 달력 일정, 안건, 휴가, 메모 데이터를 완전히 삭제하시겠습니까?")) {
+            localStorage.removeItem('kcsc_agendas');
+            localStorage.removeItem('kcsc_completedEvents');
+            localStorage.removeItem('kcsc_memo'); 
+            localStorage.removeItem('kcsc_vacations');
+            
+            agendas = [];
+            completedEvents = [];
+            vacations = [];
+            document.getElementById('dailyMemo').value = '';
+            
+            renderCalendar(currentYear, currentMonth);
+            updatePendingList();
+            alert("초기화가 완료되었습니다.");
+        }
+    }
+
+    function init() {
+        loadData();
+        renderCalendar(currentYear, currentMonth);
+        updatePendingList();
+        
+        document.getElementById('dailyMemo').addEventListener('input', function() {
+            localStorage.setItem('kcsc_memo', this.value);
+        });
+    }
+
+    // 휴가 등록 및 삭제 (V13의 방식과 호환되도록 단순화)
+    function addVacation() {
+        var rawDate = document.getElementById('vacationDate').value;
+        var type = document.getElementById('vacationType').value;
+        if (!rawDate) { alert('휴가 날짜를 선택해주세요.'); return; }
+
+        var d = new Date(rawDate);
+        if (isNaN(d.getTime())) { alert('유효하지 않은 날짜입니다.'); return; }
+
+        var yStr = d.getFullYear();
+        var mStr = (d.getMonth() + 1 < 10 ? '0' : '') + (d.getMonth() + 1);
+        var dStr = (d.getDate() < 10 ? '0' : '') + d.getDate();
+        var safeDate = yStr + '-' + mStr + '-' + dStr;
+
+        var newVacations = [];
+        for(var i=0; i<vacations.length; i++) {
+            if(vacations[i] && vacations[i].date !== safeDate) {
+                newVacations.push(vacations[i]);
+            }
+        }
+        vacations = newVacations;
+        vacations.push
